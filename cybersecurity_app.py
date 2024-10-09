@@ -3,25 +3,17 @@ from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain.prompts import ChatPromptTemplate
 from langchain.chains import LLMChain
 import psycopg2
-import pg8000
 
-def get_db_connection():
-    return pg8000.connect(
-        database=db_params["dbname"],
-        user=db_params["user"],
-        password=db_params["password"],
-        host=db_params["host"],
-        port=int(db_params["port"])
-    )
-db_params = {
-    "dbname": "Gradient",
-    "user": "postgres",
-    "password": "test",
-    "host": "localhost",
-    "port": "5432"
-}
 # Access your API keys
 OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
+# Database connection parameters
+db_params = {
+    "dbname": st.secrets["postgres"]["dbname"],
+    "user": st.secrets["postgres"]["user"],
+    "password": st.secrets["postgres"]["password"],
+    "host": st.secrets["postgres"]["host"],
+    "port": st.secrets["postgres"]["port"]
+}
 
 TABLE_NAME = 'cyber'
 EMBEDDING_MODEL = "text-embedding-ada-002"
@@ -71,24 +63,29 @@ DEFAULT_SYSTEM_INSTRUCTION = """You are an AI assistant specialized in cybersecu
 
 Your response should be informative, actionable, and directly relevant to the specific query and the data provided. Focus on giving insights and recommendations that are most pertinent to the user's question."""
 
+# The rest of the code remains the same
 def query_similar_records(query_text, k=5):
-    embeddings = OpenAIEmbeddings(openai_api_key=OPENAI_API_KEY)
+    embeddings = OpenAIEmbeddings(
+        openai_api_key=OPENAI_API_KEY,
+        model=EMBEDDING_MODEL
+    )
     query_embedding = embeddings.embed_query(query_text)
-    conn = get_db_connection()
+    conn = psycopg2.connect(**db_params)
+    cur = conn.cursor()
     try:
-        with conn.cursor() as cur:
-            cur.execute(f"""
-            SELECT * FROM {TABLE_NAME}
-            ORDER BY embedding <=> %s
-            LIMIT %s
-            """, (query_embedding, k))
-            results = cur.fetchall()
-            columns = [desc[0] for desc in cur.description]
-            return [dict(zip(columns, row)) for row in results]
+        cur.execute(f"""
+        SELECT * FROM {TABLE_NAME}
+        ORDER BY embedding <=> %s::vector
+        LIMIT %s
+        """, (query_embedding, k))
+        results = cur.fetchall()
+        columns = [desc[0] for desc in cur.description]
+        return [dict(zip(columns, row)) for row in results]
     except Exception as e:
         st.error(f"An error occurred during similarity search: {e}")
         return []
     finally:
+        cur.close()
         conn.close()
 
 def process_query(query, similar_records, system_instruction):
