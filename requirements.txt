@@ -1,6 +1,9 @@
-
 streamlit==1.27.0
 langchain==0.0.300
 openai==1.6.1
 pg8000==1.29.8
 python-dotenv==1.0.0
+pillow==9.5.0 --only-binary=:all:
+numpy==1.26.4 --only-binary=:all:
+pandas==2.2.3 --only-binary=:all:
+pyarrow==17.0.0 --only-binary=:all:
