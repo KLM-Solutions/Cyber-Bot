@@ -5,17 +5,16 @@ from langchain.chains import LLMChain
 import psycopg2
 import pg8000
 
-
+def get_db_connection():
+    return pg8000.connect(
+        database=db_params["dbname"],
+        user=db_params["user"],
+        password=db_params["password"],
+        host=db_params["host"],
+        port=int(db_params["port"])
+    )
 # Access your API keys
 OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
-# Database connection parameters
-db_params = {
-    "dbname": "Gradient",
-    "user": "postgres",
-    "password": "test",
-    "host": "localhost",
-    "port": "5432"
-}
 
 TABLE_NAME = 'cyber'
 EMBEDDING_MODEL = "text-embedding-ada-002"
