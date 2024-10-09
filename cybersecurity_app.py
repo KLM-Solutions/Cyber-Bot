@@ -3,6 +3,7 @@ from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain.prompts import ChatPromptTemplate
 from langchain.chains import LLMChain
 import psycopg2
+import pg8000
 
 
 # Access your API keys
@@ -64,29 +65,24 @@ DEFAULT_SYSTEM_INSTRUCTION = """You are an AI assistant specialized in cybersecu
 
 Your response should be informative, actionable, and directly relevant to the specific query and the data provided. Focus on giving insights and recommendations that are most pertinent to the user's question."""
 
-# The rest of the code remains the same
 def query_similar_records(query_text, k=5):
-    embeddings = OpenAIEmbeddings(
-        openai_api_key=OPENAI_API_KEY,
-        model=EMBEDDING_MODEL
-    )
+    embeddings = OpenAIEmbeddings(openai_api_key=OPENAI_API_KEY)
     query_embedding = embeddings.embed_query(query_text)
-    conn = psycopg2.connect(**db_params)
-    cur = conn.cursor()
+    conn = get_db_connection()
     try:
-        cur.execute(f"""
-        SELECT * FROM {TABLE_NAME}
-        ORDER BY embedding <=> %s::vector
-        LIMIT %s
-        """, (query_embedding, k))
-        results = cur.fetchall()
-        columns = [desc[0] for desc in cur.description]
-        return [dict(zip(columns, row)) for row in results]
+        with conn.cursor() as cur:
+            cur.execute(f"""
+            SELECT * FROM {TABLE_NAME}
+            ORDER BY embedding <=> %s
+            LIMIT %s
+            """, (query_embedding, k))
+            results = cur.fetchall()
+            columns = [desc[0] for desc in cur.description]
+            return [dict(zip(columns, row)) for row in results]
     except Exception as e:
         st.error(f"An error occurred during similarity search: {e}")
         return []
     finally:
-        cur.close()
         conn.close()
 
 def process_query(query, similar_records, system_instruction):
