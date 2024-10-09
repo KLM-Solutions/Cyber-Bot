@@ -1,5 +1,6 @@
+
 streamlit==1.27.0
 langchain==0.0.300
 openai==1.6.1
-psycopg2-binary==2.9.7
+pg8000==1.29.8
 python-dotenv==1.0.0
