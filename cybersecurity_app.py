@@ -13,6 +13,13 @@ def get_db_connection():
         host=db_params["host"],
         port=int(db_params["port"])
     )
+db_params = {
+    "dbname": "Gradient",
+    "user": "postgres",
+    "password": "test",
+    "host": "localhost",
+    "port": "5432"
+}
 # Access your API keys
 OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
 
