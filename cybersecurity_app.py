@@ -4,8 +4,7 @@ from langchain_community.embeddings import OpenAIEmbeddings
 from langchain.chains import LLMChain
 import psycopg2
 
-# Access your API keys
-OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
+OPENAI_API_KEY = st.secrets["openai"]["api_key"]
 # Database connection parameters
 db_params = {
     "dbname": st.secrets["postgres"]["dbname"],
