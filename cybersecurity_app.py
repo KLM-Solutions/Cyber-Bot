@@ -63,31 +63,35 @@ DEFAULT_SYSTEM_INSTRUCTION = """You are an AI assistant specialized in cybersecu
 
 Your response should be informative, actionable, and directly relevant to the specific query and the data provided. Focus on giving insights and recommendations that are most pertinent to the user's question."""
 
-# The rest of the code remains the same
 def query_similar_records(query_text, k=5):
     embeddings = OpenAIEmbeddings(
-        openai_api_key=OPENAI_API_KEY,
+        openai_api_key=st.secrets["openai"]["api_key"],
         model=EMBEDDING_MODEL
     )
     query_embedding = embeddings.embed_query(query_text)
-    conn = psycopg2.connect(**db_params)
-    cur = conn.cursor()
     try:
-        cur.execute(f"""
-        SELECT * FROM {TABLE_NAME}
-        ORDER BY embedding <=> %s::vector
-        LIMIT %s
-        """, (query_embedding, k))
-        results = cur.fetchall()
-        columns = [desc[0] for desc in cur.description]
-        return [dict(zip(columns, row)) for row in results]
-    except Exception as e:
-        st.error(f"An error occurred during similarity search: {e}")
+        conn = psycopg2.connect(**st.secrets["postgres"])
+        cur = conn.cursor()
+        try:
+            cur.execute(f"""
+            SELECT * FROM {TABLE_NAME}
+            ORDER BY embedding <=> %s::vector
+            LIMIT %s
+            """, (query_embedding, k))
+            results = cur.fetchall()
+            columns = [desc[0] for desc in cur.description]
+            return [dict(zip(columns, row)) for row in results]
+        except Exception as e:
+            st.error(f"An error occurred during database query: {e}")
+            return []
+        finally:
+            cur.close()
+    except psycopg2.OperationalError as e:
+        st.error(f"Unable to connect to the database. Error: {e}")
         return []
     finally:
-        cur.close()
-        conn.close()
-
+        if 'conn' in locals():
+            conn.close()
 def process_query(query, similar_records, system_instruction):
     llm = ChatOpenAI(openai_api_key=OPENAI_API_KEY, model_name="gpt-4o-mini")
     
