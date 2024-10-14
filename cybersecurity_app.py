@@ -56,32 +56,49 @@ DEFAULT_SYSTEM_INSTRUCTION = """You are an AI assistant specialized in cybersecu
 
 Your response should be informative, actionable, and directly relevant to the specific query and the data provided. Focus on giving insights and recommendations that are most pertinent to the user's question."""
 
+
 def query_similar_records(query_text, k=5):
     embeddings = OpenAIEmbeddings(
         openai_api_key=st.secrets["openai"]["api_key"],
         model=EMBEDDING_MODEL
     )
     query_embedding = embeddings.embed_query(query_text)
+    
     try:
         conn = psycopg2.connect(NEON_DB_URL)
         cur = conn.cursor()
         try:
-            # Ensure the vector extension is available
-            cur.execute("CREATE EXTENSION IF NOT EXISTS vector")
+            # Define a function for cosine similarity
+            cur.execute("""
+            CREATE OR REPLACE FUNCTION cosine_similarity(a json, b float[])
+            RETURNS float AS $$
+            DECLARE
+                a_array float[];
+            BEGIN
+                SELECT ARRAY(SELECT CAST(jsonb_array_elements_text(a::jsonb) AS float))
+                INTO a_array;
+                RETURN (a_array <@> b) / (|/ (a_array <@> a_array) * |/ (b <@> b));
+            END;
+            $$ LANGUAGE plpgsql;
+            """)
             conn.commit()
-            
-            # Convert the JSON embedding to a vector and perform similarity search
+
+            # Use the function in the query
             cur.execute(f"""
-            SELECT *, embedding::vector <=> %s::vector AS distance
+            SELECT *, cosine_similarity(embedding, %s::float[]) AS similarity
             FROM {TABLE_NAME}
-            ORDER BY distance
+            ORDER BY similarity DESC
             LIMIT %s
-            """, (query_embedding, k))
+            """, (json.dumps(query_embedding), k))
+            
             results = cur.fetchall()
             columns = [desc[0] for desc in cur.description]
             return [dict(zip(columns, row)) for row in results]
         except Exception as e:
-            st.error(f"An error occurred during database query: {e}")
+            st.error(f"An error occurred during database query: {str(e)}")
+            st.error(f"Error type: {type(e).__name__}")
+            import traceback
+            st.error(f"Traceback: {traceback.format_exc()}")
             return []
         finally:
             cur.close()
