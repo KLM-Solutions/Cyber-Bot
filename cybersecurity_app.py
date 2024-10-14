@@ -156,10 +156,6 @@ def main():
     if query:  # Process query as soon as it's entered
         with st.spinner("Processing your query..."):
             similar_records = query_similar_records(query)
-            
-            # Debug: Print number of similar records found
-            st.write(f"Debug: Number of similar records found: {len(similar_records)}")
-            
             if similar_records:
                 response = process_query(query, similar_records, st.session_state.get('system_instruction', DEFAULT_SYSTEM_INSTRUCTION))
                 
@@ -167,19 +163,12 @@ def main():
                 st.write(response)
                 
                 st.subheader("Similar Records (Key Information):")
-                for i, record in enumerate(similar_records, 1):
-                    st.write(f"---\nRecord {i}:")
+                for record in similar_records:
+                    st.write("---")
                     for col in ["ID", "eventDtgTime", "alerts", "displayTitle", "incident"]:
                         if col in record and record[col]:
-                            st.markdown(f"**{col}:** {record[col]}")
-                    
-                    # Debug: Print all columns for the first record
-                    if i == 1:
-                        st.write("Debug: All columns for first record:")
-                        for col, value in record.items():
-                            st.write(f"{col}: {value}")
+                            st.write(f"{col}: {record[col]}")
             else:
                 st.warning("No similar records found for the given query.")
-
 if __name__ == "__main__":
     main()
