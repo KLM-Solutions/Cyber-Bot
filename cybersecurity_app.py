@@ -70,9 +70,11 @@ def query_similar_records(query_text, k=5):
             cur.execute("CREATE EXTENSION IF NOT EXISTS vector")
             conn.commit()
             
+            # Convert the JSON embedding to a vector and perform similarity search
             cur.execute(f"""
-            SELECT * FROM {TABLE_NAME}
-            ORDER BY embedding <=> %s::vector
+            SELECT *, embedding::vector <=> %s::vector AS distance
+            FROM {TABLE_NAME}
+            ORDER BY distance
             LIMIT %s
             """, (query_embedding, k))
             results = cur.fetchall()
