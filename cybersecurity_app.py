@@ -70,15 +70,19 @@ def query_similar_records(query_text, k=5):
         conn = psycopg2.connect(NEON_DB_URL)
         cur = conn.cursor()
         try:
-            # Define a function for cosine similarity
+            # Define a function for cosine similarity that handles string input
             cur.execute("""
-            CREATE OR REPLACE FUNCTION cosine_similarity(a json, b float[])
+            CREATE OR REPLACE FUNCTION cosine_similarity_string(a text, b float[])
             RETURNS float AS $$
             DECLARE
                 a_array float[];
             BEGIN
-                SELECT ARRAY(SELECT CAST(jsonb_array_elements_text(a::jsonb) AS float))
-                INTO a_array;
+                -- Parse the string into an array of floats
+                SELECT ARRAY(
+                    SELECT unnest(string_to_array(trim(both '[]' from a), ','))::float
+                ) INTO a_array;
+                
+                -- Calculate cosine similarity
                 RETURN (a_array <@> b) / (|/ (a_array <@> a_array) * |/ (b <@> b));
             END;
             $$ LANGUAGE plpgsql;
@@ -87,7 +91,7 @@ def query_similar_records(query_text, k=5):
 
             # Use the function in the query
             cur.execute(f"""
-            SELECT *, cosine_similarity(embedding, %s::float[]) AS similarity
+            SELECT *, cosine_similarity_string(embedding, %s::float[]) AS similarity
             FROM {TABLE_NAME}
             ORDER BY similarity DESC
             LIMIT %s
@@ -99,7 +103,6 @@ def query_similar_records(query_text, k=5):
         except Exception as e:
             st.error(f"An error occurred during database query: {str(e)}")
             st.error(f"Error type: {type(e).__name__}")
-            import traceback
             st.error(f"Traceback: {traceback.format_exc()}")
             return []
         finally:
@@ -110,7 +113,6 @@ def query_similar_records(query_text, k=5):
     finally:
         if 'conn' in locals():
             conn.close()
-
 def process_query(query, similar_records, system_instruction):
     llm = ChatOpenAI(openai_api_key=OPENAI_API_KEY, model_name="gpt-4o-mini")
     
