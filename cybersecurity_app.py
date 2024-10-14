@@ -1,6 +1,7 @@
 import streamlit as st
 from langchain_community.chat_models import ChatOpenAI
 from langchain_community.embeddings import OpenAIEmbeddings
+from langchain.prompts import ChatPromptTemplate  
 from langchain.chains import LLMChain
 import psycopg2
 import traceback 
