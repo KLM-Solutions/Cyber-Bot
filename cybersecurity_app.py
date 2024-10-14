@@ -3,6 +3,8 @@ from langchain_community.chat_models import ChatOpenAI
 from langchain_community.embeddings import OpenAIEmbeddings
 from langchain.chains import LLMChain
 import psycopg2
+import json 
+import traceback 
 
 OPENAI_API_KEY = st.secrets["openai"]["api_key"]
 # Neon database connection string
