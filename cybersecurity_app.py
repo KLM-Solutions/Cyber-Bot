@@ -5,14 +5,8 @@ from langchain.chains import LLMChain
 import psycopg2
 
 OPENAI_API_KEY = st.secrets["openai"]["api_key"]
-# Database connection parameters
-db_params = {
-    "dbname": st.secrets["postgres"]["dbname"],
-    "user": st.secrets["postgres"]["user"],
-    "password": st.secrets["postgres"]["password"],
-    "host": st.secrets["postgres"]["host"],
-    "port": st.secrets["postgres"]["port"]
-}
+# Neon database connection string
+NEON_DB_URL = st.secrets["neon"]["database_url"]
 
 TABLE_NAME = 'cyber'
 EMBEDDING_MODEL = "text-embedding-ada-002"
@@ -69,9 +63,13 @@ def query_similar_records(query_text, k=5):
     )
     query_embedding = embeddings.embed_query(query_text)
     try:
-        conn = psycopg2.connect(**st.secrets["postgres"])
+        conn = psycopg2.connect(NEON_DB_URL)
         cur = conn.cursor()
         try:
+            # Ensure the vector extension is available
+            cur.execute("CREATE EXTENSION IF NOT EXISTS vector")
+            conn.commit()
+            
             cur.execute(f"""
             SELECT * FROM {TABLE_NAME}
             ORDER BY embedding <=> %s::vector
@@ -86,11 +84,12 @@ def query_similar_records(query_text, k=5):
         finally:
             cur.close()
     except psycopg2.OperationalError as e:
-        st.error(f"Unable to connect to the database. Error: {e}")
+        st.error(f"Unable to connect to the Neon database. Error: {e}")
         return []
     finally:
         if 'conn' in locals():
             conn.close()
+
 def process_query(query, similar_records, system_instruction):
     llm = ChatOpenAI(openai_api_key=OPENAI_API_KEY, model_name="gpt-4o-mini")
     
