@@ -3,7 +3,6 @@ from langchain_community.chat_models import ChatOpenAI
 from langchain_community.embeddings import OpenAIEmbeddings
 from langchain.chains import LLMChain
 import psycopg2
-import json 
 import traceback 
 
 OPENAI_API_KEY = st.secrets["openai"]["api_key"]
@@ -70,30 +69,11 @@ def query_similar_records(query_text, k=5):
         conn = psycopg2.connect(NEON_DB_URL)
         cur = conn.cursor()
         try:
-            # Define a function for cosine similarity that handles string input
-            cur.execute("""
-            CREATE OR REPLACE FUNCTION cosine_similarity_string(a text, b float[])
-            RETURNS float AS $$
-            DECLARE
-                a_array float[];
-            BEGIN
-                -- Parse the string into an array of floats
-                SELECT ARRAY(
-                    SELECT unnest(string_to_array(trim(both '[]' from a), ','))::float
-                ) INTO a_array;
-                
-                -- Calculate cosine similarity
-                RETURN (a_array <@> b) / (|/ (a_array <@> a_array) * |/ (b <@> b));
-            END;
-            $$ LANGUAGE plpgsql;
-            """)
-            conn.commit()
-
-            # Use the function in the query
+            # Directly use the vector comparison operator
             cur.execute(f"""
-            SELECT *, cosine_similarity_string(embedding, %s::float[]) AS similarity
+            SELECT *, embedding <=> %s::vector AS similarity
             FROM {TABLE_NAME}
-            ORDER BY similarity DESC
+            ORDER BY similarity ASC
             LIMIT %s
             """, (json.dumps(query_embedding), k))
             
@@ -113,6 +93,7 @@ def query_similar_records(query_text, k=5):
     finally:
         if 'conn' in locals():
             conn.close()
+
 def process_query(query, similar_records, system_instruction):
     llm = ChatOpenAI(openai_api_key=OPENAI_API_KEY, model_name="gpt-4o-mini")
     
