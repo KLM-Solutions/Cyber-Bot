@@ -64,26 +64,24 @@ def query_similar_records(query_text, k=5):
         model=EMBEDDING_MODEL
     )
     query_embedding = embeddings.embed_query(query_text)
-    
     try:
         conn = psycopg2.connect(NEON_DB_URL)
         cur = conn.cursor()
         try:
-            # Directly use the vector comparison operator
-            cur.execute(f"""
-            SELECT *, embedding <=> %s::vector AS similarity
-            FROM {TABLE_NAME}
-            ORDER BY similarity ASC
-            LIMIT %s
-            """, (json.dumps(query_embedding), k))
+            # Ensure the vector extension is available
+            cur.execute("CREATE EXTENSION IF NOT EXISTS vector")
+            conn.commit()
             
+            cur.execute(f"""
+            SELECT * FROM {TABLE_NAME}
+            ORDER BY embedding <=> %s::vector
+            LIMIT %s
+            """, (query_embedding, k))
             results = cur.fetchall()
             columns = [desc[0] for desc in cur.description]
             return [dict(zip(columns, row)) for row in results]
         except Exception as e:
-            st.error(f"An error occurred during database query: {str(e)}")
-            st.error(f"Error type: {type(e).__name__}")
-            st.error(f"Traceback: {traceback.format_exc()}")
+            st.error(f"An error occurred during database query: {e}")
             return []
         finally:
             cur.close()
@@ -93,7 +91,6 @@ def query_similar_records(query_text, k=5):
     finally:
         if 'conn' in locals():
             conn.close()
-
 def process_query(query, similar_records, system_instruction):
     llm = ChatOpenAI(openai_api_key=OPENAI_API_KEY, model_name="gpt-4o-mini")
     
