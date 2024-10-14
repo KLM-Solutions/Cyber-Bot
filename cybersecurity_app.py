@@ -157,8 +157,7 @@ def main():
         with st.spinner("Processing your query..."):
             similar_records = query_similar_records(query)
             
-            # Debug: Print number of similar records found (can be commented out in production)
-            st.write(f"Debug: Number of similar records found: {len(similar_records)}")
+            
             
             if similar_records:
                 response = process_query(query, similar_records, st.session_state.get('system_instruction', DEFAULT_SYSTEM_INSTRUCTION))
