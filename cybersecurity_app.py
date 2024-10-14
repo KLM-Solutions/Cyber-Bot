@@ -157,7 +157,7 @@ def main():
         with st.spinner("Processing your query..."):
             similar_records = query_similar_records(query)
             
-            # Debug: Print number of similar records found
+            # Debug: Print number of similar records found (can be commented out in production)
             st.write(f"Debug: Number of similar records found: {len(similar_records)}")
             
             if similar_records:
@@ -165,17 +165,8 @@ def main():
                 
                 st.subheader("Analysis and Recommendations:")
                 st.write(response)
-                
-                st.subheader("Similar Records (Key Information):")
-                for i, record in enumerate(similar_records, 1):
-                    st.write(f"---\nRecord {i}:")
-                    for col in ["ID", "eventDtgTime"]:
-                        if col in record and record[col]:
-                            st.markdown(f"**{col}:** {record[col]}")
-                    
-            
             else:
-                st.warning("No similar records found for the given query.")
+                st.warning("No relevant information found for the given query.")
 
 if __name__ == "__main__":
     main()
