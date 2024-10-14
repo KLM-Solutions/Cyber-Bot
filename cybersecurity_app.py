@@ -153,7 +153,7 @@ def main():
     # Main area for query input and results
     query = st.text_input("Enter your cybersecurity query:")
 
- if query:  # Process query as soon as it's entered
+    if query:  # Process query as soon as it's entered
         with st.spinner("Processing your query..."):
             similar_records = query_similar_records(query)
             
