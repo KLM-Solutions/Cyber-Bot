@@ -6,6 +6,7 @@ from langchain.chains import LLMChain
 import psycopg2
 import traceback 
 
+
 OPENAI_API_KEY = st.secrets["openai"]["api_key"]
 # Neon database connection string
 NEON_DB_URL = st.secrets["neon"]["database_url"]
