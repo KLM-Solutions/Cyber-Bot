@@ -10,7 +10,7 @@ OPENAI_API_KEY = st.secrets["openai"]["api_key"]
 # Neon database connection string
 NEON_DB_URL = st.secrets["neon"]["database_url"]
 
-TABLE_NAME = 'cyber'
+TABLE_NAME = 'sitrep_2024'
 EMBEDDING_MODEL = "text-embedding-ada-002"
 
 # List of all columns
